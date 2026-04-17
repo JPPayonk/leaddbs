@@ -69,9 +69,9 @@ classdef ea_unifiedmapping < handle
         leadgroup % redundancy protocol only, path to original lead group project
         useExternalModel = false
         ExternalModelFile = 'None'
-        
+
         % NM visualization
-        NMviz=struct; 
+        NMviz=struct;
         % NMviz.vizmode='Regions'; % way to plot results
         % NMviz.model='Smoothed'; % in case of surface above, on which surface to plot.
         % NMviz.modelLH=1; % show left hemisphere
@@ -82,7 +82,7 @@ classdef ea_unifiedmapping < handle
         modelNormalization = 'None';
         numBins=15;
         stats
-        
+
         % additional settings:
         rngseed = 'default';
         Nperm = 1000 % how many permutations in leave-nothing-out permtest strategy
@@ -94,7 +94,7 @@ classdef ea_unifiedmapping < handle
         roithresh = 200; % threshold above which efield metrics are considered
         drawTool = 'sweetspotmapping'; % active draw tool: sweetspotmapping, fiberfiltering, networkmapping
         activated = struct; % activated.fiberfiltering, activated.sweetspotmapping, activated.networkmapping % for activation status mapping.
-        
+
         % misc
         runwhite = 0; % flag to calculate connected tracts instead of stat tracts
         e_field_metric = 'Magnitude'; % 'Magnitude' or 'Projection'
@@ -107,8 +107,8 @@ classdef ea_unifiedmapping < handle
         negcolor = [0.2824,0.6157,0.9725] % negative peak color
         hasResults = false; % results check
         AdditionalSettingsSavePath = [];
-      
-    end 
+
+    end
 
     properties (Access = private)
         switchedFromSpace=3 % if switching space, this will protocol where from
@@ -142,7 +142,7 @@ classdef ea_unifiedmapping < handle
             obj.calcsettings.calcthreshold = 100;
             obj.calcsettings.switch_connectivity = 1;
             obj.calcsettings.connectivity_type = 1; %1 = vta, 2 = PAM
-            obj.calcsettings.functionalresolution = '2 mm'; 
+            obj.calcsettings.functionalresolution = '2 mm';
             obj.calcsettings.structuralresolution = '2 mm';
             obj.calcsettings.calcmethod = 1; %1 = e-field based method, 2 = fiber based method
             obj.calcsettings.calcspace = 1; %0 = native space, 1 = MNI space
@@ -209,7 +209,7 @@ classdef ea_unifiedmapping < handle
                 end
                 obj.responsevar = obj.M.clinical.vars{1};
                 obj.responsevarlabel = obj.M.clinical.labels{1};
-                
+
             elseif  isfield(U, explorer)  % Saved explorer class loaded
                 props = properties(U.explorer);
                 for p =  1:length(props) %copy all public properties
@@ -278,7 +278,7 @@ classdef ea_unifiedmapping < handle
                 end
             end
             if obj.calcsettings.selectedTool == 1 % sweetspotmapping
-                  
+
                 % in case of the sweetspot explorer, calculate rather means to
                 % gather all E-Fields. To keep consistency of the logic with
                 % discfiberexplorer and networkmappingexplorer, we will keep
@@ -302,7 +302,7 @@ classdef ea_unifiedmapping < handle
                 end
 
                 obj.results.sweetspotmapping.efield = AllX;
-                
+
                 obj.results.sweetspotmapping.space = space;
 
                 if ~isfield(obj.M,'pseudoM')
@@ -330,11 +330,11 @@ classdef ea_unifiedmapping < handle
                         fname = ea_unifiedmapping_conn2connid(obj.calcsettings.fibfilt_connectome);
                         if isfield(obj.results.fiberfiltering, fname)
                             connField = obj.results.fiberfiltering.(fname);
-                
+
                             % now check the specific subfields safely
                             if (isfield(connField,'PAM_Ttest') && obj.calcsettings.connectivity_type==2) || ...
                                (isfield(connField,'efield_mean') && obj.calcsettings.connectivity_type==1)
-                
+
                                 answ = questdlg('This has already been calculated. Are you sure you want to re-calculate everything?', ...
                                                 'Recalculate Results','No','Yes','No');
                                 if ~strcmp(answ,'Yes')
@@ -381,7 +381,7 @@ classdef ea_unifiedmapping < handle
                 end
 
             elseif obj.calcsettings.selectedTool == 3 % network mapping
-                
+
                 if ~isempty(obj.results) % something has been calculated
 
                     if isfield(obj.results,'networkmapping')
@@ -393,12 +393,12 @@ classdef ea_unifiedmapping < handle
                         end
                     end
                 end
-                
+
                 if isfield(obj.M,'pseudoM')
                     vatlist = obj.M.ROI.list;
                 else
                     %TODO:I have removed this from the networkmapping explorer folder and added it to the unified mapping explorer. Please adjust based on the future of the tool. I refrained from making a copy since the name of this script makes sense and would be redundant to change the name
-                    vatlist = ea_unified_nm_getvats(obj); 
+                    vatlist = ea_unified_nm_getvats(obj);
                 end
                 %TODO:I have removed this from the networkmapping explorer folder and added it to the unified mapping explorer. Please adjust based on the future of the tool. I refrained from making a copy since the name of this script makes sense and would be redundant to change the name
                 [AllX] = ea_unified_nm_calcvals(vatlist, obj.calcsettings.netmap_connectome);
@@ -494,7 +494,7 @@ classdef ea_unifiedmapping < handle
                         end
                     end
                     %recheck
-                    
+
             end
             return
         end
@@ -506,15 +506,15 @@ classdef ea_unifiedmapping < handle
             obj.results.fiberfiltering.(connid).connFiberInd_PAM = connFiberInd;
             obj.results.fiberfiltering.(connid).totalFibers = totalFibers; % total number of fibers in the connectome to work with global indices
             obj.results.fiberfiltering.(connid).('pam_fibers').fibcell= fibcell_pam;
-           
+
             % temp. duplicate fibcell, will be fixed in the new explorer
             obj.results.fiberfiltering.(ea_unifiedmapping_conn2connid(obj.calcsettings.fibfilt_connectome)).fibcell = obj.results.fiberfiltering.(ea_unifiedmapping_conn2connid(obj.calcsettings.fibfilt_connectome)).('pam_fibers').fibcell;
-            %add a provision for the results 
+            %add a provision for the results
             obj.results.fiberfiltering.(ea_unifiedmapping_conn2connid(obj.calcsettings.fibfilt_connectome)).calculationMethod = obj.calcsettings.calcmethod;
         end
         function calculate_on_efield(obj,cfile)
            connid = ea_unifiedmapping_conn2connid(obj.calcsettings.fibfilt_connectome);
-           
+
             if isfield(obj.M,'pseudoM')
                 vatlist=obj.M.ROI.list;
                 [obj.customRoi.isbinary,obj.customRoi.minmax]=ea_unifiedmapping_checkcustomNii(vatlist);
@@ -544,10 +544,10 @@ classdef ea_unifiedmapping < handle
 
         function calculate_on_fibers(obj,cfile)
             connid = (ea_unifiedmapping_conn2connid(obj.calcsettings.fibfilt_connectome));
-            
-          
+
+
             % OSS-DBS E-field should be computed (not just warped!) in this space
-            
+
             % get VAT list
 
             if isfield(obj.M,'pseudoM')
@@ -555,8 +555,8 @@ classdef ea_unifiedmapping < handle
             else
                 [vatlist,~] = ea_unifiedmapping_getlattice(obj);
             end
-            
-            
+
+
             % warp connectome to native space and compute E-field metrics
             ea_unified_get_Eproj(obj,vatlist)
 
@@ -568,7 +568,7 @@ classdef ea_unifiedmapping < handle
                     space = 'MNI';
             end
 
-            % load e-field projection metrics             
+            % load e-field projection metrics
             [fibsvalBin_proj, fibsvalSum_proj, fibsvalMean_proj, fibsvalPeak_proj, fibsval5Peak_proj, fibcell_proj, connFiberInd_proj,fibsvalBin_magn, fibsvalSum_magn, fibsvalMean_magn, fibsvalPeak_magn, fibsval5Peak_magn, fibcell_magn, connFiberInd_magn, totalFibers] = ea_unifiedmapping_native_calcvals(vatlist, cfile, space, obj);
 
             obj.results.fiberfiltering.(connid).totalFibers = totalFibers; % total number of fibers in the connectome to work with global indices
@@ -580,7 +580,7 @@ classdef ea_unifiedmapping < handle
             obj.results.fiberfiltering.(connid).('plainconn').fibsval = fibsvalBin_magn;
             obj.results.fiberfiltering.(connid).('efield_fibers').fibcell = fibcell_magn;
             obj.results.fiberfiltering.(connid).('efield_fibers').connFiberInd_VAT = connFiberInd_magn; % old fiberfiltering files do not have these data and will fail when using pathway atlases
-            
+
             obj.results.fiberfiltering.(connid).('VAT_Ttest_proj').fibsval = fibsvalBin_proj;
             obj.results.fiberfiltering.(connid).('efield_proj_sum').fibsval = fibsvalSum_proj;
             obj.results.fiberfiltering.(connid).('efield_proj_mean').fibsval = fibsvalMean_proj;
@@ -636,9 +636,9 @@ classdef ea_unifiedmapping < handle
                     ea_cprintf('CmdWinWarnings', 'recalculate_fiberfiltering_threshold: unsupported calcmethod. No action.\n');
             end
         end
-        
+
         function  results = calc_biophysical(obj,options,filesToCalc)
-            
+
             for pt = filesToCalc
                 [options.root, options.patientname] = fileparts(obj.M.patient.list{pt});
                 options.root = [options.root, filesep];
@@ -697,7 +697,7 @@ classdef ea_unifiedmapping < handle
                         catch
                             vatCalcPassed(side) = 0;
                         end
-                        if ~vatCalcPassed(side) 
+                        if ~vatCalcPassed(side)
                              ea_cprintf('CmdWinWarnings', 'VTA calculation failed for %s!\n', options.patientname);
                         end
                     end
@@ -708,7 +708,7 @@ classdef ea_unifiedmapping < handle
         end
 
 
-        
+
 
         function Amps = getstimamp(obj)
             Amps=zeros(length(obj.M.patient.list),2);
@@ -972,7 +972,7 @@ classdef ea_unifiedmapping < handle
 
             end
 
-            
+
             for c=1:cvp.NumTestSets
                 if cvp.NumTestSets ~= 1
                     if ~silent
@@ -1149,22 +1149,22 @@ classdef ea_unifiedmapping < handle
                             case 'Split & Color By Subscore'
                                 if ~exist('Iperm', 'var') || isempty(Iperm)
                                     useI=obj.subscore.vars{voter}(patientsel);
-                                else 
+                                else
                                     % to be added by Nanditha
-                                end 
+                                end
                             case 'Split & Color By PCA'
                                 if ~exist('Iperm', 'var') || isempty(Iperm)
                                     useI=obj.subscore.pcavars{voter}(patientsel);
                                 else
                                     PCscores = ea_nanzscore(Iperm(patientsel, : ))*obj.subscore.pcacoeff;
-                                    useI = PCscores(:, voter); 
+                                    useI = PCscores(:, voter);
                                 end
                             otherwise
                                 if ~exist('Iperm', 'var') || isempty(Iperm)
                                     useI=obj.responsevar(patientsel);
-                                else 
-                                    useI=Iperm(patientsel); 
-                                end 
+                                else
+                                    useI=Iperm(patientsel);
+                                end
                         end
 
                         if size(useI,2)>1
@@ -1428,7 +1428,7 @@ classdef ea_unifiedmapping < handle
 
         function save(obj, saveas)
             % Create a temporary object with only the required fields
-            
+
             % Get all properties of the object
             explorer = ea_unifiedmapping;
             Incprops = {'results','calcsettings','statsettings','leadgroup','ID','M'};
@@ -1451,20 +1451,20 @@ classdef ea_unifiedmapping < handle
                 savepath = saveas;
                 obj.analysispath = saveas;
             end
-        
+
             rf = obj.resultfig;   % stash fig handle before saving
             rd = obj.drawobject;  % stash drawing handle before saving
             try
                 setappdata(rf, ['dt_', explorer.ID], rd);
             end
-        
+
             save(savepath, 'explorer', '-v7.3');
             saveObjectToJson(obj);
             obj.resultfig = rf;
             obj.drawobject = rd;
-          
 
-            % 
+
+            %
             % %This is necessary to match the settings file
             % %only save results in this
             % if isempty(obj.analysispath)
@@ -1477,7 +1477,7 @@ classdef ea_unifiedmapping < handle
             % try % could be figure is already closed.
             %     setappdata(rf,['dt_',explorer.ID],rd); % store handle of tract to figure.
             % end
-            % 
+            %
             % save(obj.analysispath,'explorer','-v7.3');
             % saveObjectToJson(obj);
             % obj.resultfig=rf;
@@ -1486,13 +1486,13 @@ classdef ea_unifiedmapping < handle
 
         function saveObjectToJson(obj)
             % Convert object to a struct (including nested objects)
-            
+
             voxtractsettings = objectToStruct(obj);
 
             % % % force setselection to be stored as a cell array otherwise json will get
             % % % it wrong
             % % voxtractsettings.setselections = struct('type','celllogical', ...
-            % %     'data',{obj.setselections});            
+            % %     'data',{obj.setselections});
             % Convert struct to JSON
             jsonStr = jsonencode(voxtractsettings, 'PrettyPrint', true);
             %define filepaths
@@ -1510,7 +1510,7 @@ classdef ea_unifiedmapping < handle
                 case 'networkmapping'
                 conn_val = ea_unifiedmapping_conn2connid(obj.calcsettings.netmap_connectome);
             end
-        
+
             if ~isfolder(DBSMappingfolder)
                 ea_mkdir(DBSMappingfolder)
             end
@@ -1525,7 +1525,7 @@ classdef ea_unifiedmapping < handle
                 if isempty(ext)
                     ext = '.json';
                 end
-            
+
                 if ~strcmpi(ext, '.json')
                     error('AdditionalSettingsSavePath must point to a .json file');
                 end
@@ -1534,9 +1534,9 @@ classdef ea_unifiedmapping < handle
                 if isempty(folder)
                     folder = DBSMappingfolder;
                 end
-            
+
                 jsonPath = fullfile(folder, [name ext]);
-            
+
             else
                 % default behavior
                 jsonPath = fullfile(DBSMappingfolder, ...
@@ -1544,7 +1544,7 @@ classdef ea_unifiedmapping < handle
             end
 
             % jsonPath=[DBSMappingfolder,filesep,'Settings-',obj.ID,'_conn-',conn_val,'.json'];
-            % 
+            %
             % Write JSON to a file
             fileID = fopen(jsonPath, 'w');
             if fileID == -1
@@ -1554,7 +1554,41 @@ classdef ea_unifiedmapping < handle
             fclose(fileID);
         end
 
-        function s = objectToStruct(obj)
+        function exportDeidentified(obj)
+            % Export analysis parameters and computed outcomes to JSON,
+            % stripping all patient-identifying information (paths, IDs,
+            % patient lists, electrode data, raw M struct).
+
+            [fname, fpath] = uiputfile('*.json', 'Save De-identified Export As');
+            if isequal(fname, 0); return; end
+            [~, stem] = fileparts(fname);
+            jsonPath = fullfile(fpath, [stem, '.json']);
+
+            ignoreList = {'M', 'results', 'resultfig', 'drawobject', ...
+                'leadgroup', 'analysispath', 'ID', ...
+                'patientselection', 'allpatients', 'customselection', ...
+                'AdditionalSettingsSavePath', 'connFiberInd', 'hasResults', ...
+                'roiintersectdata', 'roidata', 'connfiberdrawn', ...
+                'conndrawobject', 'roidrawobject', 'explorerdrawn', ...
+                'drawvals', 'subscore', 'stats', 'activated'};
+
+            s = objectToStruct(obj, ignoreList);
+
+            % Replace patientselection with an anonymous count
+            s.N_patients = numel(obj.patientselection);
+
+            jsonStr = jsonencode(s, 'PrettyPrint', true);
+            fileID = fopen(jsonPath, 'w');
+            if fileID == -1
+                error('Cannot open file for writing.');
+            end
+            fprintf(fileID, '%s', jsonStr);
+            fclose(fileID);
+
+            msgbox(sprintf('De-identified export saved to:\n%s', jsonPath));
+        end
+
+        function s = objectToStruct(obj, ignoreList)
             % Convert an object to a struct, handling nested objects
             if nargin < 2
                 ignoreList = {'results','resultfig','drawobject','M'}; %M should be present in the explorer mat file. This is because there are some complicated structures in M files that are not well translated in struct (for json encoding). % Default: Do not ignore any properties unless specified
@@ -1584,7 +1618,7 @@ classdef ea_unifiedmapping < handle
         end
 
         function draw(obj)
-            
+
             if ~isfield(obj.activated,'sweetspotmapping')
                 obj.activated.sweetspotmapping='Off';
             end
@@ -1652,7 +1686,7 @@ classdef ea_unifiedmapping < handle
                     ea_unified_draw(obj);
             end
 
-   
+
         end
     end
     methods (Static)
