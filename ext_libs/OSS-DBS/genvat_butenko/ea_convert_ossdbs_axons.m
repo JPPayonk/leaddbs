@@ -28,11 +28,18 @@ else
     source_index = ['_',num2str(source_i)];
 end
 
+% An external per-source run gives each source its own Results_src<N>/; a local
+% run reuses one Results/ and converts each source before the next overwrites it.
+resultsDir = [outputPaths.HemiSimFolder, filesep, 'Results'];
+if isfield(settings,'postprocess_cluster') && settings.postprocess_cluster && source_i > 1 && source_i ~= 5
+    resultsDir = [outputPaths.HemiSimFolder, filesep, sprintf('Results_src%d', source_i)];
+end
+
 if prob_PAM 
-    axonStateProb = ea_regexpdir([outputPaths.HemiSimFolder, filesep, 'Results'], 'Axon_state.*\_prob.mat', 0);
+    axonStateProb = ea_regexpdir(resultsDir, 'Axon_state.*\_prob.mat', 0);
     axonState = axonStateProb;
 else
-    axonState = ea_regexpdir([outputPaths.HemiSimFolder, filesep, 'Results'], 'Axon_state.*\.mat', 0);
+    axonState = ea_regexpdir(resultsDir, 'Axon_state.*\.mat', 0);
 end   
 
 if settings.stimSetMode

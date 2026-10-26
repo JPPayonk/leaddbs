@@ -31,25 +31,33 @@ switch side
         sideStr = 'left';
 end
 
+% An external per-source run gives each source its own Results_src<N>/; a local
+% run reuses one Results/ and converts each source before the next overwrites it.
+% Mirrors ea_convert_ossdbs_axons.m.
+resultsDir = [outputPaths.HemiSimFolder, filesep, 'Results'];
+if isfield(settings,'postprocess_cluster') && settings.postprocess_cluster && source_use_index > 1 && source_use_index ~= 5
+    resultsDir = [outputPaths.HemiSimFolder, filesep, sprintf('Results_src%d', source_use_index)];
+end
+
 if settings.removeElectrode
     % create nii for distorted grid
     if options.native
-        ea_get_field_from_csv(anchorImage, [outputPaths.HemiSimFolder, filesep, 'Results', filesep,'E_field_Lattice.csv'], settings.Activation_threshold_VTA(side+1), sideLabel, outputPaths.outputBasePath, source_use_index)
+        ea_get_field_from_csv(anchorImage, [resultsDir, filesep,'E_field_Lattice.csv'], settings.Activation_threshold_VTA(side+1), sideLabel, outputPaths.outputBasePath, source_use_index)
     else
-        ea_get_field_from_csv([ea_space, options.primarytemplate, '.nii'], [outputPaths.HemiSimFolder, filesep, 'Results', filesep,'E_field_Lattice.csv'], settings.Activation_threshold_VTA(side+1), sideLabel, outputPaths.outputBasePath, source_use_index)
+        ea_get_field_from_csv([ea_space, options.primarytemplate, '.nii'], [resultsDir, filesep,'E_field_Lattice.csv'], settings.Activation_threshold_VTA(side+1), sideLabel, outputPaths.outputBasePath, source_use_index)
     end
 else
     % convert original OSS-DBS VTAs to BIDS in the corresponding space
     if ~multiSourceMode(side+1)
-        copyfile(fullfile([outputPaths.HemiSimFolder, filesep, 'Results', filesep,'E_field_solution_Lattice.nii.gz']), fullfile([outputPaths.outputBasePath, 'efield_model-ossdbs_hemi-', sideLabel, '.nii.gz']));
-        copyfile(fullfile([outputPaths.HemiSimFolder, filesep, 'Results', filesep,'VTA_solution_Lattice.nii.gz']), fullfile([outputPaths.outputBasePath, 'binary_model-ossdbs_hemi-', sideLabel, '.nii.gz']));
+        copyfile(fullfile([resultsDir, filesep,'E_field_solution_Lattice.nii.gz']), fullfile([outputPaths.outputBasePath, 'efield_model-ossdbs_hemi-', sideLabel, '.nii.gz']));
+        copyfile(fullfile([resultsDir, filesep,'VTA_solution_Lattice.nii.gz']), fullfile([outputPaths.outputBasePath, 'binary_model-ossdbs_hemi-', sideLabel, '.nii.gz']));
         gunzip(fullfile([outputPaths.outputBasePath, 'efield_model-ossdbs_hemi-', sideLabel, '.nii.gz']));
         gunzip(fullfile([outputPaths.outputBasePath, 'binary_model-ossdbs_hemi-', sideLabel, '.nii.gz']));
         delete(fullfile([outputPaths.outputBasePath, 'efield_model-ossdbs_hemi-', sideLabel, '.nii.gz']));
         delete(fullfile([outputPaths.outputBasePath, 'binary_model-ossdbs_hemi-', sideLabel, '.nii.gz']));
     else
-        copyfile(fullfile([outputPaths.HemiSimFolder, filesep, 'Results', filesep,'E_field_solution_Lattice.nii.gz']), fullfile([outputPaths.outputBasePath, 'efield_model-ossdbs_hemi-', sideLabel,'_S',num2str(source_use_index), '.nii.gz']));
-        copyfile(fullfile([outputPaths.HemiSimFolder, filesep, 'Results', filesep,'VTA_solution_Lattice.nii.gz']), fullfile([outputPaths.outputBasePath, 'binary_model-ossdbs_hemi-', sideLabel,'_S',num2str(source_use_index), '.nii.gz']));
+        copyfile(fullfile([resultsDir, filesep,'E_field_solution_Lattice.nii.gz']), fullfile([outputPaths.outputBasePath, 'efield_model-ossdbs_hemi-', sideLabel,'_S',num2str(source_use_index), '.nii.gz']));
+        copyfile(fullfile([resultsDir, filesep,'VTA_solution_Lattice.nii.gz']), fullfile([outputPaths.outputBasePath, 'binary_model-ossdbs_hemi-', sideLabel,'_S',num2str(source_use_index), '.nii.gz']));
         gunzip(fullfile([outputPaths.outputBasePath, 'efield_model-ossdbs_hemi-', sideLabel,'_S',num2str(source_use_index), '.nii.gz']));
         gunzip(fullfile([outputPaths.outputBasePath, 'binary_model-ossdbs_hemi-', sideLabel,'_S',num2str(source_use_index), '.nii.gz']));
         delete(fullfile([outputPaths.outputBasePath, 'efield_model-ossdbs_hemi-', sideLabel,'_S',num2str(source_use_index), '.nii.gz']));
@@ -61,7 +69,7 @@ end
 
 % always transform to MNI space
 if options.native
-    ea_get_MNI_field_from_csv(options, [outputPaths.HemiSimFolder, filesep, 'Results', filesep,'E_field_Lattice.csv'], settings.Activation_threshold_VTA(side+1), sideLabel, outputPaths.templateOutputBasePath, source_use_index)
+    ea_get_MNI_field_from_csv(options, [resultsDir, filesep,'E_field_Lattice.csv'], settings.Activation_threshold_VTA(side+1), sideLabel, outputPaths.templateOutputBasePath, source_use_index)
 end
 
 if options.native && ~options.orignative &&  ~multiSourceMode(side+1)
@@ -84,4 +92,4 @@ end
 
 % also create 4D nii (4-th dimension is for E-field components and magnitude)
 file2save = [outputPaths.outputBasePath, '4D_efield_model-ossdbs_hemi-', sideLabel, '.nii'];
-ea_get_4Dfield_from_csv([outputPaths.HemiSimFolder, filesep, 'Results', filesep,'E_field_Lattice.csv'], file2save)
+ea_get_4Dfield_from_csv([resultsDir, filesep,'E_field_Lattice.csv'], file2save)

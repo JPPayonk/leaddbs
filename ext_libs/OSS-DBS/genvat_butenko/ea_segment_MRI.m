@@ -24,6 +24,24 @@ else
      settings.MRI_data_name = [outputPaths.outputDir, filesep, segmaskName];
 end
 
+% When postprocessing results computed elsewhere, the segmask that produced
+% them is already on disk and has already been consumed by the solver. Rebuild
+% it and we would spend a SynthSeg run per subject to overwrite the mask the
+% results were actually solved on, leaving the stimulation folder describing a
+% different model than the one it holds. The settings above are still set, so
+% the struct stays complete for ea_save_ossdbs_settings.
+% The same holds when only staging for an external run: re-deriving a mask that
+% is already on disk costs a SynthSeg run per subject -- ~25 GB of RAM on a large
+% anchor image, enough to be OOM-killed -- purely to reproduce it, and a subject
+% being re-staged should keep the model its earlier results were solved on.
+% Delete segmask.nii to force a rebuild (e.g. after changing butenko_segmAlg).
+reuseSegmask = (isfield(settings, 'postprocess_cluster') && settings.postprocess_cluster) ...
+            || (isfield(settings, 'prepFiles_cluster')   && settings.prepFiles_cluster);
+if reuseSegmask && isfile([outputPaths.outputDir, filesep, segmaskName])
+    fprintf('Reusing existing %s, skipping segmentation.\n', segmaskName);
+    return
+end
+
 if options.native
     anchorImage = options.subj.preopAnat.(options.subj.AnchorModality).coreg;
 end 

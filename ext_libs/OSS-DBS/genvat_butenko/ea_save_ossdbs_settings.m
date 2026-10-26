@@ -14,7 +14,20 @@ end
 % Axon_state_*.mat / Pathway_status_*.json we need to keep.
 postprocess_cluster = isfield(settings,'postprocess_cluster') && settings.postprocess_cluster;
 
-parameterFile = fullfile(outputPaths.outputDir, 'oss-dbs_parameters.mat');
+% Set only while staging several sources for one external run. Each source
+% needs its own parameter file, and the earlier sources' staged folders must
+% survive, so the cleanup below is limited to the first source. Source 1 keeps
+% the unsuffixed name, so single-source staging is unchanged.
+clusterSourceIndex = 0;
+if isfield(settings,'cluster_source_index')
+    clusterSourceIndex = settings.cluster_source_index;
+end
+
+if clusterSourceIndex > 1
+    parameterFile = fullfile(outputPaths.outputDir, sprintf('oss-dbs_parameters_src%d.mat', clusterSourceIndex));
+else
+    parameterFile = fullfile(outputPaths.outputDir, 'oss-dbs_parameters.mat');
+end
 if ~postprocess_cluster
     save(parameterFile, 'settings', '-v7.3');
 end
@@ -25,7 +38,7 @@ if options.native
     ea_savestimulation(S, poptions);
 end
 
-if ~postprocess_cluster
+if ~postprocess_cluster && clusterSourceIndex <= 1
     % Delete previous results from stimSetMode
     ea_delete([outputPaths.outputDir, filesep, 'Result_StimProt_*']);
     if options.native

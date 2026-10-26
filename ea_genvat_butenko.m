@@ -49,13 +49,32 @@ if isfield(options,'prepFiles_cluster')
 else
     prepFiles_cluster = 0; % set to 1 if you only want to prep files for cluster comp.
 end
-postprocess_cluster = 0; % set to 1 if OSS-DBS was already run externally (e.g. on a cluster) and you only want Lead-DBS postprocessing. Mutually exclusive with prepFiles_cluster.
+if isfield(options,'postprocess_cluster')
+    postprocess_cluster = options.postprocess_cluster;
+else
+    postprocess_cluster = 0; % set to 1 if OSS-DBS was already run externally (e.g. on a cluster) and you only want Lead-DBS postprocessing. Mutually exclusive with prepFiles_cluster.
+end
 settings.reuse_warped_connectome = postprocess_cluster;  % always reuse when postprocessing cluster results to preserve fiber-ID consistency with Axon_state_*.mat
 settings.postprocess_cluster = postprocess_cluster;  % gates destructive cleanup in ea_prepare_fibers and ea_save_ossdbs_settings (cluster output must not be wiped)
+settings.prepFiles_cluster = prepFiles_cluster;  % lets ea_segment_MRI reuse an existing segmask when only staging
 true_VTA = 0; % set to 1 to compute classic VAT using axonal grids
 
 % set outputs
 outputPaths = ea_get_oss_outputPaths(options,S);
+
+% When postprocessing an external run, read off disk whether more than one source
+% was actually simulated: each source beyond the first writes its own
+% Results_src<N>/ beside the untagged Results/ (see the TAG block in ossdbs_job.SLURM).
+% Without this, multisource subjects silently collapse to source 1.
+clusterMultiSource = false;
+if postprocess_cluster
+    for sideCodeCell = {'rh','lh'}
+        srcDirs = dir([outputPaths.outputDir, filesep, 'OSS_sim_files_', sideCodeCell{1}, filesep, 'Results_src*']);
+        if ~isempty(srcDirs) && any([srcDirs.isdir])
+            clusterMultiSource = true;
+        end
+    end
+end
 
 %% Image Processing
 % segment MRI image
@@ -121,19 +140,31 @@ for source_index = first_active_source:4
         else
             % warp fibers, remove too short and too far away ones
             % TBD: skip inactive sources!
+            if prepFiles_cluster == 1 && ~postprocess_cluster && source_index > first_active_source
+                % Only the first source warps the connectome. Later sources must reuse
+                % it: the OR-merge is valid only when every source shares one fiber set
+                % and its ID numbering.
+                settings.reuse_warped_connectome = true;
+            end
             [settings,fibersFound] = ea_prepare_fibers(options, S, settings, outputPaths,  source_index);
         end
     end
 
     % Save settings for OSS-DBS
     if ~all(isnan(activeSources(:,source_index)))
+        if prepFiles_cluster == 1 && ~postprocess_cluster
+            % Each source needs its own parameter file. The cluster derives its
+            % result folder from that filename (see the TAG block in ossdbs_job.SLURM).
+            settings.cluster_source_index = source_index;
+        end
         parameterFile = ea_save_ossdbs_settings(options, S, settings, outputPaths);
     end
 
     if prepFiles_cluster == 1 && ~postprocess_cluster
-        % now you can run OSS-DBS externally
-        [varargout{1}, varargout{2}] = ea_exit_genvat_butenko();
-        return
+        % Stage this source, then move to the next; OSS-DBS runs externally.
+        % Exiting here instead would stage only the first source, which is why
+        % multi-source subjects came back single-source.
+        continue
     end
 
     % Iterate over hemispheres: 0 - rh , 1 - lh
@@ -151,11 +182,13 @@ for source_index = first_active_source:4
         % hemisphere specific data is stored in this subfolder
         outputPaths.HemiSimFolder = [outputPaths.outputDir, filesep, 'OSS_sim_files_', sideCode];
 
-        if ~multiSourceMode(side+1) || settings.postprocess_cluster
+        if ~multiSourceMode(side+1) || (settings.postprocess_cluster && ~clusterMultiSource)
             % not relevant in this case, terminate after one iteration.
-            % For postprocess_cluster, we collapse multisource to single-source
-            % semantics (cluster only ran source 1), so the BIDS filename should
-            % follow single-source convention (no _<source_index> suffix).
+            % For postprocess_cluster we collapse multisource to single-source
+            % semantics only when the external run actually produced one source,
+            % so the BIDS filename follows the single-source convention
+            % (no _<source_index> suffix). If Results_src<N>/ folders are present
+            % the suffix is kept and the per-source files merge as in a local run.
             source_use_index = 5;
         else
             source_use_index = source_index;
@@ -468,22 +501,29 @@ for source_index = first_active_source:4
     end
 
     % check only the first source for PAM
-    % (also break for postprocess_cluster -- cluster only ran source 1)
-    if all(~multiSourceMode) || settings.postprocess_cluster
+    % (also break for postprocess_cluster, unless the external run staged and
+    %  produced more than one source -- see clusterMultiSource above)
+    if all(~multiSourceMode) || (settings.postprocess_cluster && ~clusterMultiSource)
         runStatusMultiSource(2:end,:) = 1;
         break
     end
 
 end
 
+if prepFiles_cluster == 1 && ~postprocess_cluster
+    % every active source is staged; OSS-DBS runs externally
+    [varargout{1}, varargout{2}] = ea_exit_genvat_butenko();
+    return
+end
+
 % merge multisource VATs
 for side = 0:1
-    if multiSourceMode(side+1) && nActiveSources(1,side+1) > 0 && ~settings.calcAxonActivation
+    if multiSourceMode(side+1) && nActiveSources(1,side+1) > 0 && ~settings.calcAxonActivation && (~settings.postprocess_cluster || clusterMultiSource)
         %stimparams = ea_postprocess_multisource(options,settings,side+1,source_efields,source_vtas,outputPaths);
         [vatfv,vatvolume] = ea_postprocess_multisource(options,settings,side+1,source_efields,source_vtas,outputPaths);
         stimparams(side+1).VAT.VAT = vatfv;
         stimparams(side+1).volume = vatvolume;
-    elseif multiSourceMode(side+1) && nActiveSources(1,side+1) > 0 && settings.calcAxonActivation && ~settings.prob_PAM
+    elseif multiSourceMode(side+1) && nActiveSources(1,side+1) > 0 && settings.calcAxonActivation && ~settings.prob_PAM && (~settings.postprocess_cluster || clusterMultiSource)
         ea_postprocess_multisource_pam(options,settings,side+1)
     end
 end

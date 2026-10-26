@@ -30,7 +30,10 @@ for pam_idx = 1:size(axonActivations,1)
         source = parts{end}(1:end-4);
         sample = parts{end-1};
         % keep samples separate!
-        axonActivationsMerged = [axonActivations(pam_idx).folder,filesep,axonActivations(pam_idx).name(1:end-8),'.mat'];
+        % strip the trailing _<hemi><source> tag; no-op if the file is untagged,
+        % where the old fixed-offset chop ate four characters of the pathway name
+        baseName = regexprep(axonActivations(pam_idx).name, '_(rh|lh)(\d+)\.mat$', '.mat');
+        axonActivationsMerged = [axonActivations(pam_idx).folder,filesep,baseName];
 
         % search the rest to find the same pathway from the same sample!
         for pam_idx_2 = pam_idx:size(axonActivations,1)
@@ -39,7 +42,8 @@ for pam_idx = 1:size(axonActivations,1)
             source2 = parts2{end}(1:end-4);
             sample2 = parts2{end-1};
 
-            if strcmp(axonActivations(pam_idx).name(1:end-8),axonActivations(pam_idx_2).name(1:end-8))
+            if strcmp(regexprep(axonActivations(pam_idx).name, '_(rh|lh)(\d+)\.mat$', ''), ...
+                    regexprep(axonActivations(pam_idx_2).name, '_(rh|lh)(\d+)\.mat$', ''))
 
                 % merge here
                 ftr2 = load([axonActivations(pam_idx_2).folder,filesep,axonActivations(pam_idx_2).name]);

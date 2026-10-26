@@ -1,6 +1,6 @@
 function ea_flattenatlas(atlassetname,outfn)
 
-if isempty(atlassetname)
+if isempty(atlassetname) || strcmp(atlassetname,'Use none')
     return
 end
 load([ea_space,'spacedef.mat']);
